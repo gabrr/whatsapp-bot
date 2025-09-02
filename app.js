@@ -68,29 +68,83 @@ app.get("/", (req, res) => {
   }
 });
 
+// Function to send WhatsApp message
+async function sendWhatsAppMessage(
+  phoneNumber,
+  messageType = "template",
+  templateData = null,
+  textMessage = null
+) {
+  const phoneNumberId = "729388853599569"; // From your existing code
+  const url = `https://graph.facebook.com/v22.0/${phoneNumberId}/messages`;
+
+  let messageBody;
+
+  if (messageType === "template") {
+    messageBody = {
+      messaging_product: "whatsapp",
+      to: phoneNumber,
+      type: "template",
+      template: templateData || {
+        name: "hello_world",
+        language: {
+          code: "en_US",
+        },
+      },
+    };
+  } else if (messageType === "text") {
+    messageBody = {
+      messaging_product: "whatsapp",
+      to: phoneNumber,
+      type: "text",
+      text: {
+        body: textMessage,
+      },
+    };
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(messageBody),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("Error sending message:", data);
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    console.log("Message sent successfully:", data);
+    return data;
+  } catch (error) {
+    console.error("Failed to send WhatsApp message:", error);
+    throw error;
+  }
+}
+
 // Route for POST requests
-app.post("/", (req, res) => {
+app.post("/", async (req, res) => {
   const timestamp = new Date().toISOString().replace("T", " ").slice(0, 19);
 
   console.log(`\n\nWebhook received ${timestamp}\n`);
 
   const phoneNumber = "5548991075278";
 
-  fetch(`https://graph.facebook.com/v22.0/729388853599569/messages`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: {
-      messaging_product: "whatsapp",
-      to: phoneNumber,
-      type: "template",
-      template: { name: "hello_world", language: { code: "en_US" } },
-    },
-  })
-    .then((res) => res.json())
-    .then((data) => console.log(data));
+  try {
+    // Send a template message (like your curl example)
+    await sendWhatsAppMessage(phoneNumber, "template");
+
+    // Or send a text message instead:
+    // await sendWhatsAppMessage(phoneNumber, 'text', null, 'Hello from your bot!');
+  } catch (error) {
+    console.error("Error in webhook handler:", error);
+  }
 
   res.status(200).end();
 });
