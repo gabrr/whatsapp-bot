@@ -10,6 +10,7 @@ app.use(express.json());
 // Set port and verify_token
 const port = process.env.PORT || 3000;
 const verifyToken = process.env.VERIFY_TOKEN;
+const accessToken = process.env.ACCESS_TOKEN;
 
 const body = {
   object: "whatsapp_business_account",
@@ -70,15 +71,15 @@ app.get("/", (req, res) => {
 // Route for POST requests
 app.post("/", (req, res) => {
   const timestamp = new Date().toISOString().replace("T", " ").slice(0, 19);
-  console.log(`\n\nWebhook received ${timestamp}\n`);
-  const responseBody = req.body;
 
-  const phoneNumber = responseBody.entry[0].changes[0].value.messages[0].from;
+  console.log(`\n\nWebhook received ${timestamp}\n`);
+
+  const phoneNumber = "5548991075278";
 
   fetch(`https://graph.facebook.com/v22.0/729388853599569/messages`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.ACCESS_TOKEN}`,
+      Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
     },
     body: {
