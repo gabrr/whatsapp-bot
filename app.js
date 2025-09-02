@@ -11,6 +11,46 @@ app.use(express.json());
 const port = process.env.PORT || 3000;
 const verifyToken = process.env.VERIFY_TOKEN;
 
+const body = {
+  object: "whatsapp_business_account",
+  entry: [
+    {
+      id: "1827756148173612",
+      changes: [
+        {
+          value: {
+            messaging_product: "whatsapp",
+            metadata: {
+              display_phone_number: "5555936196535",
+              phone_number_id: "729388853599569",
+            },
+            contacts: [
+              {
+                profile: {
+                  name: "Gabriel Oliveira",
+                },
+                wa_id: "554891075278",
+              },
+            ],
+            messages: [
+              {
+                from: "554891075278",
+                id: "wamid.HBgMNTU0ODkxMDc1Mjc4FQIAEhgUM0EwQzlBOEFGMDFBRTUxNENCMTAA",
+                timestamp: "1756780544",
+                text: {
+                  body: "Opa",
+                },
+                type: "text",
+              },
+            ],
+          },
+          field: "messages",
+        },
+      ],
+    },
+  ],
+};
+
 // Route for GET requests
 app.get("/", (req, res) => {
   const {
@@ -31,7 +71,26 @@ app.get("/", (req, res) => {
 app.post("/", (req, res) => {
   const timestamp = new Date().toISOString().replace("T", " ").slice(0, 19);
   console.log(`\n\nWebhook received ${timestamp}\n`);
-  console.log(JSON.stringify(req.body, null, 2));
+  const responseBody = req.body;
+
+  const phoneNumber = responseBody.entry[0].changes[0].value.messages[0].from;
+
+  fetch(`https://graph.facebook.com/v22.0/729388853599569/messages`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: {
+      messaging_product: "whatsapp",
+      to: phoneNumber,
+      type: "template",
+      template: { name: "hello_world", language: { code: "en_US" } },
+    },
+  })
+    .then((res) => res.json())
+    .then((data) => console.log(data));
+
   res.status(200).end();
 });
 
