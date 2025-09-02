@@ -138,7 +138,12 @@ app.post("/", async (req, res) => {
 
   try {
     // Send a template message (like your curl example)
-    await sendWhatsAppMessage(phoneNumber, "template");
+    await sendWhatsAppMessage(
+      phoneNumber,
+      "text",
+      null,
+      "Hello from your bot!"
+    );
 
     // Or send a text message instead:
     // await sendWhatsAppMessage(phoneNumber, 'text', null, 'Hello from your bot!');
