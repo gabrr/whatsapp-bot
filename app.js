@@ -78,7 +78,7 @@ app.post("/", (req, res) => {
   fetch(`https://graph.facebook.com/v22.0/729388853599569/messages`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${accessToken}`,
+      Authorization: `Bearer ${process.env.ACCESS_TOKEN}`,
       "Content-Type": "application/json",
     },
     body: {
