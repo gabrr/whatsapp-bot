@@ -134,21 +134,37 @@ app.post("/", async (req, res) => {
 
   console.log(`\n\nWebhook received ${timestamp}\n`);
 
-  const phoneNumber = "5548991075278";
+  // Check if this webhook contains a message from a user
+  if (req.body?.entry?.[0]?.changes?.[0]?.value?.messages) {
+    const message = req.body.entry[0].changes[0].value.messages[0];
+    const fromPhoneNumber = message.from;
+    const myPhoneNumber = "5555936196535"; // Your phone number
 
-  try {
-    // Send a template message (like your curl example)
-    await sendWhatsAppMessage(
-      phoneNumber,
-      "text",
-      null,
-      "Hello from your bot!"
+    // Only respond to messages from others (not from yourself)
+    if (fromPhoneNumber !== myPhoneNumber && message.type === "text") {
+      console.log(
+        `Received message: "${message.text.body}" from ${fromPhoneNumber}`
+      );
+
+      try {
+        await sendWhatsAppMessage(
+          fromPhoneNumber,
+          "text",
+          null,
+          "Hello from your bot! You said: " + message.text.body
+        );
+      } catch (error) {
+        console.error("Error in webhook handler:", error);
+      }
+    } else if (fromPhoneNumber === myPhoneNumber) {
+      console.log("Ignoring message from myself to prevent loop");
+    } else {
+      console.log("Ignoring non-text message or other webhook type");
+    }
+  } else {
+    console.log(
+      "Webhook received but no user message found (probably delivery receipt or status)"
     );
-
-    // Or send a text message instead:
-    // await sendWhatsAppMessage(phoneNumber, 'text', null, 'Hello from your bot!');
-  } catch (error) {
-    console.error("Error in webhook handler:", error);
   }
 
   res.status(200).end();
