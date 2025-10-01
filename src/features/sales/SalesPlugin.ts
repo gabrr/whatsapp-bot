@@ -48,33 +48,45 @@ export class SalesPlugin {
   ): Promise<PluginResponse> {
     const { entities, missingFields } = intent;
 
+    // CRITICAL FIX #2: Merge with existing pending data
+    let mergedEntities = { ...entities };
+    if (context.pendingAction?.type === "CREATE_SALE") {
+      // Merge new data with existing data (new data takes precedence)
+      mergedEntities = { ...context.pendingAction.data, ...entities };
+      logger.info("Merged with pending data", { 
+        previous: context.pendingAction.data,
+        new: entities,
+        merged: mergedEntities 
+      });
+    }
+
     // Default salesperson to current user
-    if (!entities.salesperson && context.userName) {
-      entities.salesperson = context.userName;
+    if (!mergedEntities.salesperson && context.userName) {
+      mergedEntities.salesperson = context.userName;
     }
 
     // Check for missing fields
     const required = ["product", "customerName"];
     const missing = required.filter(
-      (field) => !entities[field as keyof typeof entities]
+      (field) => !mergedEntities[field as keyof typeof mergedEntities]
     );
 
     // Also check for price
-    if (!entities.totalPrice && !entities.pricePerUnit) {
+    if (!mergedEntities.totalPrice && !mergedEntities.pricePerUnit) {
       missing.push("preço");
     }
 
     if (missing.length > 0 || (missingFields && missingFields.length > 0)) {
       context.pendingAction = {
         type: "CREATE_SALE",
-        data: entities,
+        data: mergedEntities, // Store merged data
       };
       context.pendingExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 min
 
       return {
         message: this.askForMissingInfo(
           missing.concat(missingFields || []),
-          entities
+          mergedEntities
         ),
         success: true,
       };
@@ -83,13 +95,13 @@ export class SalesPlugin {
     // All data present - ask for confirmation
     context.pendingAction = {
       type: "CREATE_SALE",
-      data: entities,
+      data: mergedEntities,
     };
     context.pendingConfirmation = true;
     context.pendingExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
     return {
-      message: this.formatConfirmation(entities),
+      message: this.formatConfirmation(mergedEntities),
       success: true,
     };
   }
@@ -225,17 +237,24 @@ export class SalesPlugin {
     intent: Intent,
     context: ConversationContext
   ): Promise<PluginResponse> {
+    // CRITICAL FIX #3: Better date range handling
+    const now = new Date();
+    const startDate = intent.entities.startDate || new Date(Date.now() - 365 * 24 * 60 * 60 * 1000); // Default: last year
+    const endDate = intent.entities.endDate || new Date(now.getTime() + 24 * 60 * 60 * 1000); // Add 1 day to include today
+    
     const filters = {
       phoneNumber: context.phoneNumber,
-      startDate:
-        intent.entities.startDate ||
-        new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-      endDate: intent.entities.endDate || new Date(),
+      startDate,
+      endDate,
       customerName: intent.entities.customerName,
       salesperson: intent.entities.salesperson,
     };
 
+    logger.info("Listing sales", { filters });
+
     const sales = await this.salesService.listSales(filters);
+
+    logger.info("Sales found", { count: sales.length });
 
     if (sales.length === 0) {
       return {

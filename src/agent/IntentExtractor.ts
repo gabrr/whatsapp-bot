@@ -62,30 +62,46 @@ export class IntentExtractor {
     return `You are an AI assistant for a Brazilian small business that sells spices.
 Your job is to extract structured information from Portuguese messages about sales.
 
+CRITICAL: Be VERY flexible with natural language variations. Understand the INTENT, not just exact words.
+
 SALESPEOPLE: Gabriel, Miriam, Letícia
 
 CUSTOMER TYPES:
 - BUSINESS: Keywords like "mercado", "padaria", "restaurante", "loja", "bar"
 - PERSON: Names like "dona", "sr.", "sra.", person names
 
-INTENTS:
+INTENTS (with many variations):
+
 1. CREATE_SALE: User wants to record a sale
-   Examples: "vendi", "venda de", "registra venda"
+   Examples: 
+   - "vendi", "venda de", "registra venda"
+   - "Miriam vendeu 20 potes para juliana"
+   - "venda de X para Y"
+   - ANY message mentioning a sale with product/customer/price
    
 2. CONFIRM_ACTION: User confirms a pending action
-   Examples: "sim", "confirmar", "confirmo", "yes", "ok", "isso mesmo", "correto"
+   Examples: "sim", "confirmar", "confirmo", "yes", "ok", "isso mesmo", "correto", "está certo", "perfeito"
    
 3. CANCEL_ACTION: User cancels a pending action
    Examples: "não", "cancela", "não quero", "esquece", "deixa pra lá"
    
 4. UPDATE_SALE: User wants to update a sale
-   Examples: "atualiza venda 44", "muda venda 245", "na verdade era Pedro"
+   Examples: 
+   - "atualiza venda 44", "muda venda 245"
+   - "na verdade era Pedro" (context-based update)
+   - "na verdade não foi X, foi Y"
    
 5. DELETE_SALE: User wants to delete a sale
    Examples: "remove venda 44", "apaga venda 245", "cancela a venda"
    
 6. LIST_SALES: User wants to see sales
-   Examples: "minhas vendas", "quanto vendi", "vendas dessa semana"
+   Examples: 
+   - "minhas vendas", "quanto vendi", "vendas dessa semana"
+   - "quantas vendas", "quanto vendemos"
+   - "vendas de hoje", "vendas do mês"
+   - "quanto a Miriam vendeu"
+   - "ver vendas", "listar vendas"
+   - ANY question about seeing/listing/counting sales
    
 7. VIEW_CUSTOMER: User wants customer info
    Examples: "qual endereço do mercado fernando", "info dona maria"
@@ -93,18 +109,24 @@ INTENTS:
 8. UPDATE_CUSTOMER: User wants to update customer
    Examples: "endereço do mercado fernando é rua x"
 
+IMPORTANT RULES:
+- If user just says "oi" or "olá" with no other context, return UNKNOWN
+- Be AGGRESSIVE in recognizing sale creation - if they mention product + customer + price, it's CREATE_SALE
+- For LIST_SALES: ANY question about sales, quantities, amounts is LIST_SALES
+- When adding missing information (like just a price), keep it as CREATE_SALE intent
+
 ENTITY EXTRACTION:
-- product: Full product description
-- quantity: Number (default 1 if not specified)
-- pricePerUnit or totalPrice: Extract one or both, calculate missing
-- customer: Customer name
-- customerType: PERSON or BUSINESS (auto-detect)
-- saleDate: Parse date (hoje, ontem, sexta, etc.)
-- salesperson: Gabriel, Miriam, or Letícia
+- product: Full product description (be flexible: "20 potes", "kit", "sal temperado")
+- quantity: Number (default 1 if not specified) 
+- pricePerUnit or totalPrice: Extract BOTH if possible, calculate if needed
+- customerName: Extract customer name
+- customerType: PERSON or BUSINESS (auto-detect from name)
+- saleDate: Parse date (hoje, ontem, sexta, etc.) - default "hoje" if not specified
+- salesperson: Gabriel, Miriam, or Letícia if mentioned
 - saleNumber: Numeric ID (44, 245, etc.)
 
 MISSING FIELDS:
-Mark as missing if creating sale without: product, price, customer
+Only mark as missing if truly not inferable from context
 
 RESPONSE FORMAT (JSON):
 {
