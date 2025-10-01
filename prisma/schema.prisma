@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id          String   @id @default(uuid())
+  phoneNumber String   // Owner's WhatsApp number
+  
+  // Customer info
+  name        String
+  nameNormalized String  // Lowercase, no accents for fuzzy matching
+  type        String      // "PERSON" or "BUSINESS"
+  document    String?
+  address     String?
+  notes       String?
+  
+  // Relationships
+  sales       Sale[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Unique per user (case insensitive via normalized)
+  @@unique([phoneNumber, nameNormalized])
+  @@index([phoneNumber])
+  @@index([nameNormalized])
+}
+
+model Sale {
+  id           String   @id @default(uuid())
+  phoneNumber  String
+  saleNumber   Int      // Human-friendly: #1, #2, #44
+  
+  // Sale details
+  product      String
+  quantity     Float
+  pricePerUnit Float
+  totalPrice   Float
+  saleDate     DateTime
+  
+  // Salesperson
+  salesperson  String
+  
+  // Customer relationship
+  customerId   String
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  // Metadata
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@unique([phoneNumber, saleNumber])
+  @@index([phoneNumber, saleDate])
+  @@index([customerId])
+  @@index([salesperson])
+}
+
+model ConversationState {
+  phoneNumber         String   @id
+  userName            String?  // Gabriel, Miriam, Letícia
+  lastMessageAt       DateTime @default(now())
+  
+  // Pending confirmation
+  pendingAction       String?  // JSON string
+  pendingConfirmation Boolean  @default(false)
+  pendingExpiresAt    DateTime?
+  
+  // Last references
+  lastSaleNumber      Int?
+  lastCustomerName    String?
+  
+  @@index([lastMessageAt])
+  @@index([pendingExpiresAt])
+}
+
