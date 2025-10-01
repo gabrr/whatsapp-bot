@@ -402,10 +402,11 @@ export class SalesPlugin {
     // Show what we already have
     const hasInfo: string[] = [];
     if (entities.product) hasInfo.push(`✓ Produto: ${entities.product}`);
-    if (entities.customerName) hasInfo.push(`✓ Cliente: ${entities.customerName}`);
+    if (entities.customerName)
+      hasInfo.push(`✓ Cliente: ${entities.customerName}`);
     if (entities.quantity) hasInfo.push(`✓ Quantidade: ${entities.quantity}`);
     if (entities.totalPrice) hasInfo.push(`✓ Valor: R$ ${entities.totalPrice}`);
-    
+
     if (hasInfo.length > 0) {
       msg += hasInfo.join("\n") + "\n\n";
       msg += "Ainda preciso saber:\n";
