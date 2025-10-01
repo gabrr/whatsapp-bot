@@ -53,10 +53,10 @@ export class SalesPlugin {
     if (context.pendingAction?.type === "CREATE_SALE") {
       // Merge new data with existing data (new data takes precedence)
       mergedEntities = { ...context.pendingAction.data, ...entities };
-      logger.info("Merged with pending data", { 
+      logger.info("Merged with pending data", {
         previous: context.pendingAction.data,
         new: entities,
-        merged: mergedEntities 
+        merged: mergedEntities,
       });
     }
 
@@ -239,9 +239,12 @@ export class SalesPlugin {
   ): Promise<PluginResponse> {
     // CRITICAL FIX #3: Better date range handling
     const now = new Date();
-    const startDate = intent.entities.startDate || new Date(Date.now() - 365 * 24 * 60 * 60 * 1000); // Default: last year
-    const endDate = intent.entities.endDate || new Date(now.getTime() + 24 * 60 * 60 * 1000); // Add 1 day to include today
-    
+    const startDate =
+      intent.entities.startDate ||
+      new Date(Date.now() - 365 * 24 * 60 * 60 * 1000); // Default: last year
+    const endDate =
+      intent.entities.endDate || new Date(now.getTime() + 24 * 60 * 60 * 1000); // Add 1 day to include today
+
     const filters = {
       phoneNumber: context.phoneNumber,
       startDate,

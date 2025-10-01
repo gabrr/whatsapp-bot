@@ -30,10 +30,16 @@ export class Agent {
         await this.saveContext(context);
       }
 
-      // 3. Extract intent
+      // 3. Check for simple greetings first (skip AI if just "oi")
+      const simpleGreeting = this.checkSimpleGreeting(message);
+      if (simpleGreeting) {
+        return simpleGreeting;
+      }
+
+      // 4. Extract intent
       const intent = await this.intentExtractor.extract(message, context);
 
-      // 4. Route based on intent
+      // 5. Route based on intent
       let response: string;
 
       if (intent.action === "CONFIRM_ACTION" && context.pendingConfirmation) {
@@ -48,13 +54,13 @@ export class Agent {
         context.pendingExpiresAt = null;
         response = "Ok, cancelado! Posso ajudar com outra coisa?";
       } else if (intent.action === "UNKNOWN") {
-        response = this.getHelpMessage(context.userName);
+        response = this.getHelpMessage(context.userName, message);
       } else {
         const result = await this.salesPlugin.handle(intent, context);
         response = result.message;
       }
 
-      // 5. Update and save context
+      // 6. Update and save context
       context.lastMessageAt = new Date();
       await this.saveContext(context);
 
@@ -143,21 +149,72 @@ export class Agent {
     });
   }
 
-  private getHelpMessage(userName?: string): string {
-    const greeting = userName ? `Oi ${userName}!` : "Olá!";
+  private checkSimpleGreeting(message: string): string | null {
+    const normalized = message.toLowerCase().trim();
+    const greetings = ["oi", "olá", "ola", "hi", "hello", "opa", "eae", "e aí"];
+
+    // Check if it's JUST a greeting (no other content)
+    if (
+      greetings.includes(normalized) ||
+      (normalized.length < 15 &&
+        greetings.some((g) => normalized.startsWith(g)))
+    ) {
+      const responses = [
+        `Oi! Tudo bem? 😊\n\nEstou aqui pra te ajudar com as vendas!`,
+        `Olá! Que bom te ver por aqui! 👋\n\nPronta pra registrar vendas?`,
+        `Opa! Como posso ajudar? ✨\n\nVamos lá!`,
+        `E aí! Beleza? 🌟\n\nO que vamos fazer hoje?`,
+      ];
+
+      const response = responses[Math.floor(Math.random() * responses.length)];
+
+      return (
+        `${response}\n\n` +
+        `Pode me dizer coisas como:\n` +
+        `💰 Vendi X potes pra Y\n` +
+        `📊 Minhas vendas\n` +
+        `🔍 Vendas da semana`
+      );
+    }
+
+    return null;
+  }
+
+  private getHelpMessage(userName?: string, originalMessage?: string): string {
+    // Generate friendly, charismatic response
+    const greetings = [
+      `Oi ${userName || "amigo"}! 😊`,
+      `Olá ${userName || "querida"}! 👋`,
+      `Opa ${userName || ""}! ✨`,
+    ];
+
+    const reactions = [
+      `Hmm, não entendi muito bem essa`,
+      `Essa eu não peguei direito`,
+      `Desculpa, fiquei confusa aqui`,
+      `Ops, essa me deixou na dúvida`,
+    ];
+
+    const transitions = [
+      `mas tô aqui pra te ajudar! 💪`,
+      `mas vou te mostrar o que eu sei fazer! 🌟`,
+      `mas é rapidinho te explicar! ✨`,
+    ];
+
+    // Random selection for variety
+    const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+    const reaction = reactions[Math.floor(Math.random() * reactions.length)];
+    const transition =
+      transitions[Math.floor(Math.random() * transitions.length)];
 
     return (
-      `${greeting} Não entendi. Você pode:\n\n` +
-      `📝 Registrar venda:\n` +
-      `"Vendi 3 kits pro mercado fernando, 40 reais"\n\n` +
-      `📊 Ver vendas:\n` +
-      `"Minhas vendas dessa semana"\n` +
-      `"Quanto a Miriam vendeu hoje?"\n\n` +
-      `✏️ Atualizar/Remover:\n` +
-      `"Atualiza venda 44"\n` +
-      `"Remove venda 44"\n\n` +
-      `👥 Info do cliente:\n` +
-      `"Qual endereço do mercado fernando?"`
+      `${greeting}\n\n` +
+      `${reaction} ${transition}\n\n` +
+      `Eu posso:\n` +
+      `📝 Registrar vendas → "Vendi 3 kits pra Juliana, 40 reais"\n` +
+      `📊 Mostrar vendas → "Minhas vendas" ou "Vendas da semana"\n` +
+      `✏️ Atualizar → "Remove venda 1" ou "Atualiza venda 1"\n\n` +
+      `É só falar naturalmente! 😉`
     );
   }
 }

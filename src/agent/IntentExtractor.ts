@@ -3,6 +3,7 @@ import { config } from "../utils/config";
 import { logger } from "../utils/logger";
 import { parsePortugueseDate, parseDateRange } from "../utils/dateParser";
 import { Intent, ConversationContext } from "../features/sales/types";
+import { getBusinessContextPrompt } from "../utils/businessContext";
 
 export class IntentExtractor {
   private openai: OpenAI;
@@ -64,6 +65,8 @@ Your job is to extract structured information from Portuguese messages about sal
 
 CRITICAL: Be VERY flexible with natural language variations. Understand the INTENT, not just exact words.
 
+${getBusinessContextPrompt()}
+
 SALESPEOPLE: Gabriel, Miriam, Letícia
 
 CUSTOMER TYPES:
@@ -116,14 +119,20 @@ IMPORTANT RULES:
 - When adding missing information (like just a price), keep it as CREATE_SALE intent
 
 ENTITY EXTRACTION:
-- product: Full product description (be flexible: "20 potes", "kit", "sal temperado")
-- quantity: Number (default 1 if not specified) 
+- product: ALWAYS use "Sal Temperado Mirtz" (normalize from variations like "kit", "pote", "sal", "tempero")
+- quantity: Number of KITS or POTES (be smart: "3 kits" = quantity 3, "20 potes" = quantity 20)
 - pricePerUnit or totalPrice: Extract BOTH if possible, calculate if needed
 - customerName: Extract customer name
 - customerType: PERSON or BUSINESS (auto-detect from name)
 - saleDate: Parse date (hoje, ontem, sexta, etc.) - default "hoje" if not specified
 - salesperson: Gabriel, Miriam, or Letícia if mentioned
 - saleNumber: Numeric ID (44, 245, etc.)
+
+PRODUCT NORMALIZATION EXAMPLES:
+- "20 potes" → product: "20 potes de Sal Temperado Mirtz"
+- "3 kits" → product: "3 kits de Sal Temperado Mirtz"
+- "sal temperado" → product: "Sal Temperado Mirtz"
+- "temperos" → product: "Sal Temperado Mirtz"
 
 MISSING FIELDS:
 Only mark as missing if truly not inferable from context
