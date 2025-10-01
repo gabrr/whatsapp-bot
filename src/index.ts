@@ -5,6 +5,7 @@ import { prisma } from "./adapters/database/prisma";
 import { WhatsAppProvider } from "./adapters/whatsapp/WhatsAppProvider";
 import { Agent } from "./agent/Agent";
 import { IntentExtractor } from "./agent/IntentExtractor";
+import { ExtractorFactory } from "./agent/ExtractorFactory";
 import { SalesPlugin } from "./features/sales/SalesPlugin";
 import { SalesService } from "./features/sales/SalesService";
 import { CustomerService } from "./features/sales/CustomerService";
@@ -22,7 +23,10 @@ try {
 const customerService = new CustomerService(prisma);
 const salesService = new SalesService(prisma, customerService);
 const salesPlugin = new SalesPlugin(salesService, customerService);
-const intentExtractor = new IntentExtractor();
+
+// Use factory to create extractor (can switch via env var)
+const intentExtractor = ExtractorFactory.create() as IntentExtractor;
+
 const agent = new Agent(intentExtractor, salesPlugin);
 const whatsapp = new WhatsAppProvider();
 

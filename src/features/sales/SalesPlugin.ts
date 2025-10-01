@@ -397,19 +397,31 @@ export class SalesPlugin {
   // Helper methods
 
   private askForMissingInfo(missing: string[], entities: any): string {
-    let msg = "Entendi! Preciso de mais informações:\n\n";
+    let msg = "Entendi! Só falta algumas informações:\n\n";
+
+    // Show what we already have
+    const hasInfo: string[] = [];
+    if (entities.product) hasInfo.push(`✓ Produto: ${entities.product}`);
+    if (entities.customerName) hasInfo.push(`✓ Cliente: ${entities.customerName}`);
+    if (entities.quantity) hasInfo.push(`✓ Quantidade: ${entities.quantity}`);
+    if (entities.totalPrice) hasInfo.push(`✓ Valor: R$ ${entities.totalPrice}`);
+    
+    if (hasInfo.length > 0) {
+      msg += hasInfo.join("\n") + "\n\n";
+      msg += "Ainda preciso saber:\n";
+    }
 
     if (missing.includes("product")) {
-      msg += "• Qual produto foi vendido?\n";
+      msg += "• Qual produto? (ex: 1 kit, 20 potes)\n";
     }
     if (missing.includes("customerName") || missing.includes("customer")) {
       msg += "• Para qual cliente?\n";
     }
     if (missing.includes("preço") || missing.includes("price")) {
-      msg += "• Qual foi o valor?\n";
+      msg += "• Qual foi o valor total?\n";
     }
     if (missing.includes("quantity")) {
-      msg += "• Qual quantidade?\n";
+      msg += "• Quantos? (ex: 1 kit, 20 potes, um pote)\n";
     }
 
     return msg;

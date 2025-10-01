@@ -119,20 +119,34 @@ IMPORTANT RULES:
 - When adding missing information (like just a price), keep it as CREATE_SALE intent
 
 ENTITY EXTRACTION:
-- product: ALWAYS use "Sal Temperado Mirtz" (normalize from variations like "kit", "pote", "sal", "tempero")
-- quantity: Number of KITS or POTES (be smart: "3 kits" = quantity 3, "20 potes" = quantity 20)
+- product: Include quantity in description (e.g., "20 potes de Sal Temperado Mirtz", "3 kits de Sal Temperado Mirtz")
+- quantity: CRITICAL - Extract from Portuguese numbers:
+  * "um" or "uma" = 1
+  * "dois" or "duas" = 2
+  * "três" = 3
+  * "quatro" = 4
+  * "cinco" = 5
+  * "vinte" = 20
+  * OR numeric: 1, 2, 20, etc.
+  * From phrases: "um pote" = 1, "dois kits" = 2, "vinte potes" = 20
 - pricePerUnit or totalPrice: Extract BOTH if possible, calculate if needed
-- customerName: Extract customer name
+- customerName: Extract customer name (be flexible: "pro guilherme" = "Guilherme")
 - customerType: PERSON or BUSINESS (auto-detect from name)
 - saleDate: Parse date (hoje, ontem, sexta, etc.) - default "hoje" if not specified
 - salesperson: Gabriel, Miriam, or Letícia if mentioned
 - saleNumber: Numeric ID (44, 245, etc.)
 
-PRODUCT NORMALIZATION EXAMPLES:
-- "20 potes" → product: "20 potes de Sal Temperado Mirtz"
-- "3 kits" → product: "3 kits de Sal Temperado Mirtz"
-- "sal temperado" → product: "Sal Temperado Mirtz"
-- "temperos" → product: "Sal Temperado Mirtz"
+CRITICAL QUANTITY EXTRACTION EXAMPLES:
+- "um pote" → quantity: 1, product: "1 pote de Sal Temperado Mirtz"
+- "20 potes" → quantity: 20, product: "20 potes de Sal Temperado Mirtz"
+- "três kits" → quantity: 3, product: "3 kits de Sal Temperado Mirtz"
+- "dois kits" → quantity: 2, product: "2 kits de Sal Temperado Mirtz"
+- Just "kit" or "pote" → quantity: 1 (default)
+
+CUSTOMER NAME EXTRACTION:
+- "pro guilherme" → customerName: "Guilherme"
+- "pra dona maria" → customerName: "Dona Maria"
+- "para o mercado" → customerName: "Mercado"
 
 MISSING FIELDS:
 Only mark as missing if truly not inferable from context
@@ -160,6 +174,19 @@ RESPONSE FORMAT (JSON):
     context?: ConversationContext
   ): string {
     let prompt = `Extract intent and entities from this message:\n"${message}"\n\n`;
+
+    // CRITICAL: Include pending sale data so AI can merge information
+    if (context?.pendingAction?.type === "CREATE_SALE" && context.pendingAction.data) {
+      prompt += `IMPORTANT - User is adding information to an incomplete sale:\n`;
+      prompt += `Already collected:\n`;
+      const data = context.pendingAction.data;
+      if (data.product) prompt += `- Product: ${data.product}\n`;
+      if (data.quantity) prompt += `- Quantity: ${data.quantity}\n`;
+      if (data.customerName) prompt += `- Customer: ${data.customerName}\n`;
+      if (data.totalPrice) prompt += `- Price: ${data.totalPrice}\n`;
+      if (data.salesperson) prompt += `- Salesperson: ${data.salesperson}\n`;
+      prompt += `\nThe current message is providing ADDITIONAL information. Extract what's new and mark action as CREATE_SALE.\n\n`;
+    }
 
     if (context?.pendingConfirmation) {
       prompt += `Context: User has a pending confirmation.\n`;
